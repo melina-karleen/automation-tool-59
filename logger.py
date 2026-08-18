@@ -1,16 +1,40 @@
 import logging
-from logging.handlers import RotatingFileHandler
 
-def setup_logger(log_file, max_bytes=5*1024*1024, backup_count=3):
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+class Logger:
+    def __init__(self, name):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-# Example usage
-if __name__ == '__main__':
-    log = setup_logger('crypto_tool.log')
-    log.info('Logger setup complete.')
+    def debug(self, msg):
+        try:
+            self.logger.debug(msg)
+        except Exception as e:
+            self.logger.error(f'Error logging debug message: {e}')
+
+    def info(self, msg):
+        try:
+            self.logger.info(msg)
+        except Exception as e:
+            self.logger.error(f'Error logging info message: {e}')
+
+    def warning(self, msg):
+        try:
+            self.logger.warning(msg)
+        except Exception as e:
+            self.logger.error(f'Error logging warning message: {e}')
+
+    def error(self, msg):
+        try:
+            self.logger.error(msg)
+        except Exception as e:
+            self.logger.error(f'Error logging error message: {e}')
+
+    def critical(self, msg):
+        try:
+            self.logger.critical(msg)
+        except Exception as e:
+            self.logger.error(f'Error logging critical message: {e}')

@@ -1,40 +1,39 @@
+import time
+import random
 import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class Logger:
-    def __init__(self, name):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+def retry_network_operation(max_attempts=3, initial_delay=1.0, backoff_factor=2.0):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            attempt = 0
+            delay = initial_delay
+            while attempt < max_attempts:
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    attempt += 1
+                    if attempt == max_attempts:
+                        logger.error(f"Operation failed after {max_attempts} attempts: {e}")
+                        raise
+                    logger.warning(f"Attempt {attempt} failed: {e}. Retrying in {delay} seconds")
+                    time.sleep(delay)
+                    delay *= backoff_factor
+            return None
+        return wrapper
+    return decorator
 
-    def debug(self, msg):
-        try:
-            self.logger.debug(msg)
-        except Exception as e:
-            self.logger.error(f'Error logging debug message: {e}')
+@retry_network_operation(max_attempts=5, initial_delay=0.5)
+def get_crypto_balance(address):
+    if random.random() < 0.6:
+        raise ConnectionError("Failed to connect to blockchain node")
+    return {"address": address, "balance": 1.2345}
 
-    def info(self, msg):
-        try:
-            self.logger.info(msg)
-        except Exception as e:
-            self.logger.error(f'Error logging info message: {e}')
-
-    def warning(self, msg):
-        try:
-            self.logger.warning(msg)
-        except Exception as e:
-            self.logger.error(f'Error logging warning message: {e}')
-
-    def error(self, msg):
-        try:
-            self.logger.error(msg)
-        except Exception as e:
-            self.logger.error(f'Error logging error message: {e}')
-
-    def critical(self, msg):
-        try:
-            self.logger.critical(msg)
-        except Exception as e:
-            self.logger.error(f'Error logging critical message: {e}')
+if __name__ == "__main__":
+    try:
+        balance = get_crypto_balance("0x123abc")
+        print(balance)
+    except Exception as e:
+        print(f"Final error: {e}")

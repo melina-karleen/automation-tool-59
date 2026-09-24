@@ -1,35 +1,30 @@
 import logging
-import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
+
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "automation.log"
 
 
-def setup_logger(name: str = "automation_tool", log_dir: str = "logs") -> logging.Logger:
+def setup_logger(name: str = "automation-tool-59") -> logging.Logger:
+    LOG_DIR.mkdir(exist_ok=True)
+
     logger = logging.getLogger(name)
-    if logger.hasHandlers():
-        return logger
-
     logger.setLevel(logging.INFO)
+
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    file_handler = RotatingFileHandler(
+        LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5
+    )
+    file_handler.setFormatter(formatter)
 
-    try:
-        os.makedirs(log_dir, exist_ok=True)
-        file_path = os.path.join(log_dir, f"{name}.log")
-        file_handler = RotatingFileHandler(
-            file_path,
-            maxBytes=5 * 1024 * 1024,
-            backupCount=3,
-            encoding="utf-8"
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-    except Exception as e:
-        logger.warning(f"Failed to initialize file logger: {e}")
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
 
     return logger

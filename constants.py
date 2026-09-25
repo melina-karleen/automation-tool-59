@@ -1,24 +1,47 @@
-from typing import Final, Dict, List
+"""Crypto automation tool constants and configuration defaults."""
 
-EXCHANGE_IDS: Final[List[str]] = ['binance', 'coinbase', 'kraken']
-API_TIMEOUT: Final[int] = 30
-RETRY_ATTEMPTS: Final[int] = 3
+from enum import Enum
+from typing import Dict, Final, List
+
+
+class NetworkEnv(str, Enum):
+    """Supported blockchain network environments."""
+
+    MAINNET = "mainnet"
+    TESTNET = "testnet"
+    DEVNET = "devnet"
+
+
+class ExchangeID(str, Enum):
+    """Supported cryptocurrency exchanges."""
+
+    BINANCE = "binance"
+    BYBIT = "bybit"
+    KRAKEN = "kraken"
+
+
+DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
+MAX_RETRIES: Final[int] = 5
+DEFAULT_SLIPPAGE_TOLERANCE: Final[float] = 0.005
 
 PRECISION_MAP: Final[Dict[str, int]] = {
-    'BTC': 8,
-    'ETH': 6,
-    'USDT': 2
+    "BTC": 8,
+    "ETH": 18,
+    "USDT": 6,
+    "USDC": 6,
+    "SOL": 9,
 }
 
-DATABASE_URI: Final[str] = 'postgresql://localhost:5432/automation'
-MIN_TRADE_VOLUME: Final[float] = 0.001
+SUPPORTED_PAIRS: Final[List[str]] = [
+    "BTC/USDT",
+    "ETH/USDT",
+    "SOL/USDT",
+    "BTC/USDC",
+    "ETH/USDC",
+]
 
-
-def get_precision(symbol: str) -> int:
-    """Return decimal precision for given crypto asset."""
-    return PRECISION_MAP.get(symbol, 4)
-
-
-def is_supported_exchange(exchange: str) -> bool:
-    """Validate if the exchange exists in whitelist."""
-    return exchange in EXCHANGE_IDS
+DEFAULT_GAS_LIMITS: Final[Dict[str, int]] = {
+    "transfer": 21000,
+    "token_transfer": 65000,
+    "swap": 250000,
+}

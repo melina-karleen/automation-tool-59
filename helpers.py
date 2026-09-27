@@ -1,31 +1,25 @@
-import functools
 import time
-from typing import Callable, Any, Dict
+import logging
+from typing import Any, Callable, Dict
 
-CACHE: Dict[str, Any] = {}
+logger = logging.getLogger(__name__)
 
-def lru_cache_persistent(ttl: int = 300) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            key = f"{func.__name__}:{args}:{frozenset(kwargs.items())}"
-            now = time.time()
-            if key in CACHE:
-                data, timestamp = CACHE[key]
-                if now - timestamp < ttl:
-                    return data
-            result = func(*args, **kwargs)
-            CACHE[key] = (result, now)
-            return result
-        return wrapper
-    return decorator
+def retry_operation(func: Callable, retries: int = 3, delay: int = 2) -> Any:
+    last_exception = None
+    for i in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            last_exception = e
+            logger.warning(f"attempt {i+1} failed: {e}")
+            time.sleep(delay)
+    raise last_exception
 
-def batch_process(data: list, size: int = 100):
-    for i in range(0, len(data), size):
-        yield data[i:i + size]
+def format_crypto_amount(value: float, precision: int = 8) -> str:
+    return f"{value:.{precision}f}"
 
-def optimized_throughput(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        return func(*args, **kwargs)
-    return wrapper
+def sanitize_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in config.items() if v is not None}
+
+def validate_connection(status_code: int) -> bool:
+    return 200 <= status_code < 300

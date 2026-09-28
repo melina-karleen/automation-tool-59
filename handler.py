@@ -1,28 +1,35 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 def validate_trade_data(data: Dict[str, Any]) -> bool:
-    required = {'symbol', 'amount', 'price', 'side'}
-    if not all(key in data for key in required):
+    required = {'symbol', 'amount', 'price'}
+    if not all(k in data for k in required):
         return False
-    if not isinstance(data['amount'], (int, float)) or data['amount'] <= 0:
+    if data['amount'] <= 0 or data['price'] <= 0:
         return False
-    if data['side'] not in {'buy', 'sell'}:
-        return False
-    return True
+    return isinstance(data['symbol'], str)
 
-def process_queue(queue: list):
-    while queue:
-        payload = queue.pop(0)
-        if not validate_trade_data(payload):
-            logger.error(f"invalid payload received: {payload}")
-            continue
+def process_stream(data_stream: list) -> None:
+    for entry in data_stream:
         try:
-            execute_order(payload)
+            if not validate_trade_data(entry):
+                logger.warning(f"invalid trade packet skipped: {entry}")
+                continue
+            
+            execute_trade(entry)
         except Exception as e:
-            logger.error(f"execution failed: {e}")
+            logger.error(f"processing failure: {e}")
 
-def execute_order(data: Dict[str, Any]):
-    logger.info(f"executing {data['side']} order for {data['symbol']}")
+def execute_trade(data: Dict[str, Any]) -> None:
+    # Placeholder for exchange integration logic
+    logger.info(f"executing {data['symbol']} order")
+
+if __name__ == "__main__":
+    mock_data = [
+        {'symbol': 'BTC', 'amount': 0.1, 'price': 50000},
+        {'symbol': 'ETH', 'amount': -1, 'price': 3000},
+        {'symbol': 'SOL', 'amount': 5, 'price': 100}
+    ]
+    process_stream(mock_data)

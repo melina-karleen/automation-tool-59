@@ -1,33 +1,26 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class CryptoLogger:
-    def __init__(self, name: str = 'automation-tool-59', level: int = logging.INFO):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+def setup_logger(name: str, log_file: str = "automation.log") -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-    def info(self, msg: str) -> None:
-        self.logger.info(msg)
+    path = Path(log_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    def error(self, msg: str, exc_info: bool = True) -> None:
-        self.logger.error(msg, exc_info=exc_info)
+    handler = RotatingFileHandler(
+        path, 
+        maxBytes=10 * 1024 * 1024, 
+        backupCount=5
+    )
+    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
 
-    def warning(self, msg: str) -> None:
-        self.logger.warning(msg)
+    if not logger.handlers:
+        logger.addHandler(handler)
 
-def get_logger(name: str = 'automation-tool-59') -> logging.Logger:
-    return logging.getLogger(name)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
+    return logger

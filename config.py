@@ -1,23 +1,29 @@
 import os
-from dataclasses import dataclass
-from typing import Final
+from typing import Dict, Any
+from dotenv import load_dotenv
 
-@dataclass(frozen=True)
-class AppConfig:
-    API_URL: str = os.getenv("API_URL", "https://api.exchange.com")
-    TIMEOUT: int = int(os.getenv("TIMEOUT", "30"))
+load_dotenv()
+
+class Config:
+    API_KEY: str = os.getenv("API_KEY", "")
+    API_SECRET: str = os.getenv("API_SECRET", "")
+    BASE_URL: str = "https://api.exchange.com"
+    TIMEOUT: int = 30
     MAX_RETRIES: int = 3
-    LOG_LEVEL: str = "INFO"
 
-    def validate(self) -> None:
-        if not self.API_URL.startswith("https://"):
-            raise ValueError("Invalid API_URL protocol")
+    @classmethod
+    def validate(cls) -> None:
+        if not cls.API_KEY or not cls.API_SECRET:
+            raise EnvironmentError("Missing required API credentials")
 
-class ConfigLoader:
-    @staticmethod
-    def load() -> AppConfig:
-        cfg = AppConfig()
-        cfg.validate()
-        return cfg
+    @classmethod
+    def to_dict(cls) -> Dict[str, Any]:
+        return {
+            "base_url": cls.BASE_URL,
+            "timeout": cls.TIMEOUT,
+            "max_retries": cls.MAX_RETRIES
+        }
 
-SETTINGS: Final = ConfigLoader.load()
+def get_config() -> Config:
+    Config.validate()
+    return Config()

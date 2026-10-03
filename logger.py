@@ -1,28 +1,23 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+from functools import lru_cache
 
-LOG_DIR = Path('logs')
-LOG_FILE = LOG_DIR / 'automation.log'
+class CryptoLogger:
+    def __init__(self, name: str = "automation-tool-59"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.logger.addHandler(handler)
 
-LOG_DIR.mkdir(exist_ok=True)
+    @lru_cache(maxsize=128)
+    def get_logger(self, module_name: str) -> logging.Logger:
+        return self.logger.getChild(module_name)
 
-def setup_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    def info(self, msg: str):
+        self.logger.info(msg)
 
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    def error(self, msg: str):
+        self.logger.error(msg)
 
-    file_handler = RotatingFileHandler(
-        LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    return logger
+    def warning(self, msg: str):
+        self.logger.warning(msg)

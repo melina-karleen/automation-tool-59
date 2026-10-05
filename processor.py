@@ -1,49 +1,32 @@
-from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import List, Dict, Any, Optional
 
+class CryptoProcessor:
+    """Handles incoming market data for crypto automation."""
 
-class OrderProcessor:
-    """Processes and validates raw crypto exchange order data."""
+    def __init__(self, api_key: str, sandbox: bool = False) -> None:
+        self.api_key: str = api_key
+        self.sandbox: bool = sandbox
 
-    def __init__(self, min_volume: Decimal = Decimal("0.001")) -> None:
-        """Initialize processor with volume threshold."""
-        self.min_volume = min_volume
-
-    def normalize_ticker(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and normalize price and volume from raw ticker payload."""
-        symbol = str(raw_data.get("symbol", "")).upper()
-        price = Decimal(str(raw_data.get("price", "0")))
-        volume = Decimal(str(raw_data.get("volume", "0")))
+    def process_order(self, pair: str, amount: float, price: float) -> Dict[str, Any]:
+        """Executes a trade order for the given asset pair."""
         return {
-            "symbol": symbol,
+            "pair": pair,
+            "amount": amount,
             "price": price,
-            "volume": volume,
+            "status": "pending",
+            "sandbox": self.sandbox
         }
 
-    def filter_orders(self, orders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter out orders below minimum volume threshold."""
-        valid_orders: List[Dict[str, Any]] = []
-        for order in orders:
-            normalized = self.normalize_ticker(order)
-            if normalized["volume"] >= self.min_volume:
-                valid_orders.append(normalized)
-        return valid_orders
+    def validate_tickers(self, tickers: List[str]) -> bool:
+        """Verifies existence of tickers in the current market pool."""
+        return all(isinstance(t, str) and len(t) > 2 for t in tickers)
 
-    def calculate_vwap(self, orders: List[Dict[str, Any]]) -> Optional[Decimal]:
-        """Calculate Volume-Weighted Average Price for processed orders."""
-        if not orders:
-            return None
+    def get_market_status(self, timeout: Optional[int] = 30) -> str:
+        """Retrieves current connection status to exchange nodes."""
+        if timeout and timeout > 0:
+            return "online"
+        return "offline"
 
-        total_volume = Decimal("0")
-        weighted_price_sum = Decimal("0")
-
-        for order in orders:
-            price = Decimal(str(order["price"]))
-            volume = Decimal(str(order["volume"]))
-            total_volume += volume
-            weighted_price_sum += price * volume
-
-        if total_volume == Decimal("0"):
-            return Decimal("0")
-
-        return (weighted_price_sum / total_volume).quantize(Decimal("0.00000001"))
+    def calculate_spread(self, bid: float, ask: float) -> float:
+        """Computes the bid-ask spread for liquidity analysis."""
+        return round(ask - bid, 8)

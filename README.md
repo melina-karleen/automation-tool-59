@@ -1,40 +1,45 @@
 # automation-tool-59
 
-`automation-tool-59` is a high-performance Python framework designed for asynchronous interaction with decentralized exchange (DEX) liquidity pools. It enables rapid execution of arbitrage strategies and portfolio rebalancing across EVM-compatible chains.
+`automation-tool-59` is a robust Python-based framework designed for high-frequency execution and monitoring of decentralized exchange (DEX) strategies. It provides a modular architecture to streamline order routing, liquidity provision, and real-time portfolio balancing across multiple EVM-compatible chains.
 
 ## Features
 
-*   **Async Execution Engine:** Utilizes `asyncio` and `aiohttp` to manage concurrent wallet operations with minimal latency.
-*   **Flash Loan Integration:** Built-in hooks for Aave and Uniswap V3 flash loan execution to maximize capital efficiency.
-*   **On-Chain Monitoring:** Real-time mempool scanning to track pending transactions and gas price fluctuations.
-*   **Encrypted Key Management:** Secure integration with local environment variables and keystore encryption for private key handling.
+*   **Multi-Chain Order Routing:** Seamlessly execute trades across Uniswap V3, SushiSwap, and PancakeSwap with optimized gas estimation.
+*   **Asynchronous Event Loop:** Utilizes `asyncio` for non-blocking websocket connections, ensuring sub-millisecond response times to market events.
+*   **Encrypted Key Management:** Implements local AES-256 encryption for private key storage, ensuring sensitive credentials never leave your local environment.
+*   **Strategy Backtesting Suite:** Integrated historical data ingestion engine allowing users to simulate performance against past order book snapshots.
 
 ## Installation
 
-Ensure you have Python 3.10+ installed. Clone the repository and install the dependencies:
+Ensure you have Python 3.10+ installed. It is highly recommended to use a virtual environment.
 
 ```bash
+# Clone the repository
 git clone https://github.com/Developer/automation-tool-59.git
 cd automation-tool-59
-python -m venv venv
+
+# Install dependencies
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Usage
+## Basic Usage
 
-Configure your environment variables in `.env` before running the bot. To initiate a strategy monitoring loop for a specific trading pair:
+To initialize the bot, configure your `config.yaml` with your RPC provider and wallet address, then execute the main module:
 
 ```bash
-# Example: Monitor WETH/USDC pair on Arbitrum
-python main.py --network arbitrum --pair 0x... --strategy arb-v1
+# Configure environment variables
+export RPC_URL="https://mainnet.infura.io/v3/YOUR_KEY"
+
+# Run the execution engine
+python main.py --strategy=market_maker --pair=WETH-USDC
 ```
 
-## Safety Notice
-This tool is for educational and professional research purposes. Always test strategies on a testnet before deploying capital to mainnet environments. The developer is not responsible for any financial losses resulting from configuration errors or smart contract vulnerabilities.
+For advanced configuration, reference the `docs/` folder for parameter tuning regarding slippage tolerance and gas priority fees.
 
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Distributed under the MIT License. See `LICENSE` for more information.
+*Distributed under the MIT License. See `LICENSE` for more information.*

@@ -1,21 +1,32 @@
 class AutomationError(Exception):
     """Base exception for automation-tool-59."""
 
-class ExchangeConnectionError(AutomationError):
-    """Raised when connection to the exchange fails."""
+class NetworkTimeoutError(AutomationError):
+    """Raised when external crypto API request times out."""
 
 class InsufficientFundsError(AutomationError):
-    """Raised when wallet balance is below threshold."""
+    """Raised when wallet balance is below transaction requirement."""
 
-class RateLimitExceeded(AutomationError):
-    """Raised when API requests exceed defined limits."""
+class RateLimitError(AutomationError):
+    """Raised when exchange API returns 429 status codes."""
 
-class OrderExecutionError(AutomationError):
-    """Raised when a trade order fails to execute."""
+class InvalidSignatureError(AutomationError):
+    """Raised when cryptographic signature verification fails."""
 
-class ConfigurationError(AutomationError):
-    """Raised when provided configuration values are invalid."""
+def handle_critical_failure(error: Exception) -> None:
+    """Centralized diagnostic reporting for automation runtime."""
+    import logging
 
-def handle_exception(exc: Exception) -> str:
-    """Format exception message for logging purposes."""
-    return f"[{exc.__class__.__name__}] {str(exc)}"
+    logger = logging.getLogger("automation-tool-59")
+    error_type = type(error).__name__
+    
+    if isinstance(error, (NetworkTimeoutError, RateLimitError)):
+        logger.warning(f"Recoverable {error_type} encountered: {error}")
+    elif isinstance(error, (InsufficientFundsError, InvalidSignatureError)):
+        logger.error(f"Critical runtime failure: {error_type} - {error}")
+    else:
+        logger.critical(f"Unhandled system exception: {error_type} - {error}")
+
+    if isinstance(error, AutomationError):
+        return
+    raise

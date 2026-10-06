@@ -1,25 +1,24 @@
 import time
-import logging
-from typing import Any, Callable, Dict
+import hashlib
+import hmac
+from typing import Dict, Any
+from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+def generate_signature(api_secret: str, message: str) -> str:
+    return hmac.new(
+        api_secret.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
 
-def retry_operation(func: Callable, retries: int = 3, delay: int = 2) -> Any:
-    last_exception = None
-    for i in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            last_exception = e
-            logger.warning(f"attempt {i+1} failed: {e}")
-            time.sleep(delay)
-    raise last_exception
+def format_amount(amount: float, precision: int = 8) -> Decimal:
+    return Decimal(str(amount)).quantize(Decimal(f"1.{'0' * precision}"))
 
-def format_crypto_amount(value: float, precision: int = 8) -> str:
-    return f"{value:.{precision}f}"
+def get_timestamp_ms() -> int:
+    return int(time.time() * 1000)
 
-def sanitize_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: v for k, v in config.items() if v is not None}
+def sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in payload.items() if v is not None}
 
-def validate_connection(status_code: int) -> bool:
-    return 200 <= status_code < 300
+def calculate_fee(amount: float, rate: float) -> Decimal:
+    return Decimal(str(amount)) * Decimal(str(rate))

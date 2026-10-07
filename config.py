@@ -1,29 +1,24 @@
 import os
-from typing import Dict, Any
-from dotenv import load_dotenv
+from typing import Final
+from dataclasses import dataclass
 
-load_dotenv()
+@dataclass(frozen=True)
+class NetworkConfig:
+    RPC_URL: str = os.getenv("RPC_URL", "https://eth.llamarpc.com")
+    CHAIN_ID: int = int(os.getenv("CHAIN_ID", 1))
+    TIMEOUT: int = 30
+
+@dataclass(frozen=True)
+class APIConfig:
+    API_KEY: str = os.getenv("API_KEY", "")
+    SECRET: str = os.getenv("SECRET", "")
+    RATE_LIMIT: int = 5
 
 class Config:
-    API_KEY: str = os.getenv("API_KEY", "")
-    API_SECRET: str = os.getenv("API_SECRET", "")
-    BASE_URL: str = "https://api.exchange.com"
-    TIMEOUT: int = 30
-    MAX_RETRIES: int = 3
+    NETWORK: Final = NetworkConfig()
+    API: Final = APIConfig()
+    DEBUG: Final = os.getenv("DEBUG", "false").lower() == "true"
 
-    @classmethod
-    def validate(cls) -> None:
-        if not cls.API_KEY or not cls.API_SECRET:
-            raise EnvironmentError("Missing required API credentials")
-
-    @classmethod
-    def to_dict(cls) -> Dict[str, Any]:
-        return {
-            "base_url": cls.BASE_URL,
-            "timeout": cls.TIMEOUT,
-            "max_retries": cls.MAX_RETRIES
-        }
-
-def get_config() -> Config:
-    Config.validate()
-    return Config()
+def validate_env() -> None:
+    if not Config.API.API_KEY:
+        raise EnvironmentError("API_KEY missing in environment variables")

@@ -1,24 +1,27 @@
 import time
-import hashlib
-import hmac
-from typing import Dict, Any
-from decimal import Decimal
+import functools
+from typing import Callable, Any
 
-def generate_signature(api_secret: str, message: str) -> str:
-    return hmac.new(
-        api_secret.encode('utf-8'),
-        message.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
+def retry(retries: int = 3, delay: float = 1.0) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception = None
+            for _ in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    time.sleep(delay)
+            raise last_exception
+        return wrapper
+    return decorator
 
-def format_amount(amount: float, precision: int = 8) -> Decimal:
-    return Decimal(str(amount)).quantize(Decimal(f"1.{'0' * precision}"))
+def format_crypto_amount(amount: float, precision: int = 8) -> str:
+    return f"{amount:.{precision}f}".rstrip('0').rstrip('.')
 
-def get_timestamp_ms() -> int:
-    return int(time.time() * 1000)
+def validate_address(address: str, length: int = 42) -> bool:
+    return isinstance(address, str) and len(address) == length and address.startswith('0x')
 
-def sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: v for k, v in payload.items() if v is not None}
-
-def calculate_fee(amount: float, rate: float) -> Decimal:
-    return Decimal(str(amount)) * Decimal(str(rate))
+def calculate_fee(amount: float, rate: float) -> float:
+    return max(0.0, amount * rate)

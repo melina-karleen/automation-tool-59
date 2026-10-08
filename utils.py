@@ -1,52 +1,35 @@
-import asyncio
-import functools
+import json
 import logging
 import time
-from typing import Any, Callable, Tuple, Type, Union
+import urllib.error
+import urllib.request
 
 logger = logging.getLogger("automation_tool.utils")
 
 
-def retry(
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Union[Type[Exception], Tuple[Type[Exception], ...]] = Exception,
-) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        if asyncio.iscoroutinefunction(func):
+def fetch_crypto_price(symbol: str, max_retries: int = 3, base_delay: float = 1.0) -> float:
+    url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol.upper()}"
+    delay = base_delay
 
-            @functools.wraps(func)
-            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                current_delay = delay
-                for attempt in range(retries + 1):
-                    try:
-                        return await func(*args, **kwargs)
-                    except exceptions as e:
-                        if attempt == retries:
-                            logger.error(f"Failed after {retries} retries: {e}")
-                            raise
-                        logger.warning(f"Retrying in {current_delay}s: {e}")
-                        await asyncio.sleep(current_delay)
-                        current_delay *= backoff
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "CryptoBot"})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                data = json.loads(response.read().decode())
+                return float(data["price"])
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                time.sleep(delay * 2)
+            elif e.code == 400:
+                raise ValueError(f"Invalid trading pair: {symbol}") from e
+            else:
+                logger.warning(f"HTTP error {e.code} on attempt {attempt + 1}")
+        except (urllib.error.URLError, TimeoutError) as e:
+            logger.warning(f"Network connection failure: {e}")
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            raise ValueError(f"Malformed API response structure: {e}") from e
 
-            return async_wrapper
-        else:
+        time.sleep(delay)
+        delay *= 2.0
 
-            @functools.wraps(func)
-            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-                current_delay = delay
-                for attempt in range(retries + 1):
-                    try:
-                        return func(*args, **kwargs)
-                    except exceptions as e:
-                        if attempt == retries:
-                            logger.error(f"Failed after {retries} retries: {e}")
-                            raise
-                        logger.warning(f"Retrying in {current_delay}s: {e}")
-                        time.sleep(current_delay)
-                        current_delay *= backoff
-
-            return sync_wrapper
-
-    return decorator
+    raise ConnectionError(f"Max retries reached for fetching {symbol} price")

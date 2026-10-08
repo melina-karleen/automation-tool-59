@@ -1,27 +1,31 @@
 import time
-import functools
-from typing import Callable, Any
+import logging
+from typing import Dict, Any, Optional
 
-def retry(retries: int = 3, delay: float = 1.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for _ in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    time.sleep(delay)
-            raise last_exception
-        return wrapper
-    return decorator
+logger = logging.getLogger(__name__)
 
 def format_crypto_amount(amount: float, precision: int = 8) -> str:
     return f"{amount:.{precision}f}".rstrip('0').rstrip('.')
 
-def validate_address(address: str, length: int = 42) -> bool:
-    return isinstance(address, str) and len(address) == length and address.startswith('0x')
+def validate_order_params(params: Dict[str, Any]) -> bool:
+    required = {'symbol', 'side', 'quantity', 'price'}
+    return all(key in params for key in required)
 
-def calculate_fee(amount: float, rate: float) -> float:
-    return max(0.0, amount * rate)
+def retry_request(func, retries: int = 3, delay: int = 2):
+    def wrapper(*args, **kwargs):
+        last_exception = None
+        for i in range(retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                time.sleep(delay * (2 ** i))
+        logger.error(f"failed after {retries} attempts: {last_exception}")
+        raise last_exception
+    return wrapper
+
+def sanitize_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if v is not None}
+
+def get_timestamp_ms() -> int:
+    return int(time.time() * 1000)

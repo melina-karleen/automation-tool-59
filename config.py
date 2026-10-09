@@ -1,24 +1,34 @@
+import json
 import os
-from typing import Final
-from dataclasses import dataclass
+from typing import Any, Dict
 
-@dataclass(frozen=True)
-class NetworkConfig:
-    RPC_URL: str = os.getenv("RPC_URL", "https://eth.llamarpc.com")
-    CHAIN_ID: int = int(os.getenv("CHAIN_ID", 1))
-    TIMEOUT: int = 30
+DEFAULT_CONFIG = {
+    "rpc_url": "https://mainnet.infura.io/v3/",
+    "retry_limit": 3,
+    "timeout": 30,
+    "trading_pairs": ["BTC-USDT", "ETH-USDT"],
+    "fee_threshold": 0.001
+}
 
-@dataclass(frozen=True)
-class APIConfig:
-    API_KEY: str = os.getenv("API_KEY", "")
-    SECRET: str = os.getenv("SECRET", "")
-    RATE_LIMIT: int = 5
+class ConfigLoader:
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = config_path
+        self.config = self._load()
 
-class Config:
-    NETWORK: Final = NetworkConfig()
-    API: Final = APIConfig()
-    DEBUG: Final = os.getenv("DEBUG", "false").lower() == "true"
+    def _load(self) -> Dict[str, Any]:
+        if not os.path.exists(self.config_path):
+            return DEFAULT_CONFIG
+        
+        try:
+            with open(self.config_path, "r") as f:
+                user_config = json.load(f)
+                return {**DEFAULT_CONFIG, **user_config}
+        except (json.JSONDecodeError, IOError):
+            return DEFAULT_CONFIG
 
-def validate_env() -> None:
-    if not Config.API.API_KEY:
-        raise EnvironmentError("API_KEY missing in environment variables")
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.config.get(key, default)
+
+    @property
+    def all(self) -> Dict[str, Any]:
+        return self.config

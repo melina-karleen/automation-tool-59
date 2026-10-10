@@ -1,26 +1,32 @@
 import logging
-import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class CryptoLogger:
-    def __init__(self, name: str = 'automation-tool-59'):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
-        
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+LOG_DIR = Path('logs')
+LOG_FILE = LOG_DIR / 'automation.log'
 
-    def info(self, msg: str) -> None:
-        self.logger.info(msg)
+LOG_DIR.mkdir(exist_ok=True)
 
-    def error(self, msg: str) -> None:
-        self.logger.error(msg)
+def setup_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-    def warning(self, msg: str) -> None:
-        self.logger.warning(msg)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
-def get_logger(name: str = 'automation-tool-59') -> CryptoLogger:
-    return CryptoLogger(name)
+    file_handler = RotatingFileHandler(
+        LOG_FILE,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=5
+    )
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger

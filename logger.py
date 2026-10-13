@@ -1,32 +1,31 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import sys
+from typing import Optional
 
-LOG_DIR = Path('logs')
-LOG_FILE = LOG_DIR / 'automation.log'
+class CryptoLogger:
+    """Custom logger for automation-tool-59 operations."""
 
-LOG_DIR.mkdir(exist_ok=True)
+    def __init__(self, name: str, level: int = logging.INFO) -> None:
+        self.logger: logging.Logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        self._setup_handler()
 
-def setup_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    def _setup_handler(self) -> None:
+        formatter: logging.Formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    def log_info(self, message: str) -> None:
+        """Log informational messages to stdout."""
+        self.logger.info(message)
 
-    file_handler = RotatingFileHandler(
-        LOG_FILE,
-        maxBytes=10 * 1024 * 1024,
-        backupCount=5
-    )
-    file_handler.setFormatter(formatter)
+    def log_error(self, message: str, exc_info: Optional[Exception] = None) -> None:
+        """Log error messages with optional exception info."""
+        self.logger.error(message, exc_info=exc_info)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-
-    if not logger.handlers:
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-
-    return logger
+    def log_warning(self, message: str) -> None:
+        """Log warning level messages."""
+        self.logger.warning(message)

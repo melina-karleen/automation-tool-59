@@ -1,30 +1,24 @@
-import re
+class ValidationError(Exception):
+    pass
 
-class InputValidator:
-    @staticmethod
-    def validate_ticker(ticker: str) -> bool:
-        return bool(re.match(r'^[A-Z0-9]{2,10}$', ticker))
-
-    @staticmethod
-    def validate_amount(amount: float) -> bool:
-        return isinstance(amount, (int, float)) and amount > 0
-
-    @staticmethod
-    def validate_price(price: float) -> bool:
-        return isinstance(price, (int, float)) and price >= 0
-
-def process_input(data: dict):
-    ticker = data.get('ticker', '')
-    amount = data.get('amount', 0)
-    price = data.get('price', 0)
-
-    if not InputValidator.validate_ticker(ticker):
-        raise ValueError(f'Invalid ticker format: {ticker}')
+def validate_trade_params(data: dict) -> None:
+    required = {'symbol', 'amount', 'side'}
+    if not all(key in data for key in required):
+        raise ValidationError('missing required trade fields')
     
-    if not InputValidator.validate_amount(amount):
-        raise ValueError(f'Invalid amount: {amount}')
+    if not isinstance(data['amount'], (int, float)) or data['amount'] <= 0:
+        raise ValidationError('invalid trade amount')
+    
+    if data['side'] not in {'buy', 'sell'}:
+        raise ValidationError('invalid trade side')
 
-    if not InputValidator.validate_price(price):
-        raise ValueError(f'Invalid price: {price}')
+def validate_api_key(api_key: str) -> None:
+    if not isinstance(api_key, str) or len(api_key) < 32:
+        raise ValidationError('malformed api key detected')
 
-    return True
+if __name__ == '__main__':
+    try:
+        test_data = {'symbol': 'BTC', 'amount': 0.01, 'side': 'buy'}
+        validate_trade_params(test_data)
+    except ValidationError as e:
+        print(f'validation error: {e}')

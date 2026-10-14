@@ -1,31 +1,29 @@
 import logging
 import sys
-from typing import Optional
+from logging.handlers import QueueHandler, QueueListener
+from queue import Queue
 
-class CryptoLogger:
-    """Custom logger for automation-tool-59 operations."""
+class AsyncLogger:
+    def __init__(self, name: str = "crypto_bot"):
+        self.log_queue = Queue(-1)
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
 
-    def __init__(self, name: str, level: int = logging.INFO) -> None:
-        self.logger: logging.Logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        self._setup_handler()
-
-    def _setup_handler(self) -> None:
-        formatter: logging.Formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
 
-    def log_info(self, message: str) -> None:
-        """Log informational messages to stdout."""
-        self.logger.info(message)
+        self.queue_handler = QueueHandler(self.log_queue)
+        self.logger.addHandler(self.queue_handler)
+        
+        self.listener = QueueListener(self.log_queue, handler)
+        self.listener.start()
 
-    def log_error(self, message: str, exc_info: Optional[Exception] = None) -> None:
-        """Log error messages with optional exception info."""
-        self.logger.error(message, exc_info=exc_info)
+    def get_logger(self) -> logging.Logger:
+        return self.logger
 
-    def log_warning(self, message: str) -> None:
-        """Log warning level messages."""
-        self.logger.warning(message)
+    def stop(self):
+        self.listener.stop()
+
+logger_instance = AsyncLogger()
+log = logger_instance.get_logger()

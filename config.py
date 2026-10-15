@@ -3,30 +3,31 @@ import json
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "rpc_url": "https://api.mainnet-beta.solana.com",
+    "rpc_url": "https://eth.llamarpc.com",
     "timeout": 30,
-    "retry_limit": 3,
+    "retries": 3,
     "debug": False
 }
 
 class ConfigLoader:
-    def __init__(self, config_path: str = "config.json"):
-        self.path = config_path
-        self.data = self._load()
+    def __init__(self, path: str = "config.json"):
+        self.path = path
+        self.settings = self._load()
 
     def _load(self) -> Dict[str, Any]:
-        if not os.path.exists(self.path):
-            return DEFAULT_CONFIG
-        
-        try:
-            with open(self.path, "r") as f:
-                user_config = json.load(f)
-                return {**DEFAULT_CONFIG, **user_config}
-        except (json.JSONDecodeError, IOError):
-            return DEFAULT_CONFIG
+        config = DEFAULT_CONFIG.copy()
+        if os.path.exists(self.path):
+            try:
+                with open(self.path, "r") as f:
+                    user_data = json.load(f)
+                    config.update(user_data)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return config
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
+        return self.settings.get(key, default)
 
-def get_config() -> ConfigLoader:
-    return ConfigLoader()
+    @property
+    def all(self) -> Dict[str, Any]:
+        return self.settings

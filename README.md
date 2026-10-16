@@ -1,17 +1,17 @@
 # automation-tool-59
 
-`automation-tool-59` is a robust Python-based framework designed for high-frequency execution and monitoring of decentralized exchange (DEX) strategies. It provides a modular architecture to streamline order routing, liquidity provision, and real-time portfolio balancing across multiple EVM-compatible chains.
+`automation-tool-59` is a high-performance Python framework designed for asynchronous interaction with decentralized exchange (DEX) liquidity pools. It provides a robust, low-latency environment for executing automated market-making and arbitrage strategies across EVM-compatible chains.
 
-## Features
+## Key Features
 
-*   **Multi-Chain Order Routing:** Seamlessly execute trades across Uniswap V3, SushiSwap, and PancakeSwap with optimized gas estimation.
-*   **Asynchronous Event Loop:** Utilizes `asyncio` for non-blocking websocket connections, ensuring sub-millisecond response times to market events.
-*   **Encrypted Key Management:** Implements local AES-256 encryption for private key storage, ensuring sensitive credentials never leave your local environment.
-*   **Strategy Backtesting Suite:** Integrated historical data ingestion engine allowing users to simulate performance against past order book snapshots.
+*   **Async Web3 Integration:** Utilizes `web3.py` with `asyncio` for non-blocking transaction broadcasting and real-time state monitoring.
+*   **Adaptive Gas Management:** Implements a dynamic gas estimation engine that adjusts based on mempool congestion to minimize failed transactions.
+*   **Encrypted Key Management:** Secure environment variable handling with support for hardware wallet signatures (via integration with Ledger/Trezor providers).
+*   **Modular Strategy Engine:** Pluggable architecture allowing users to swap between mean-reversion, triangular arbitrage, and liquidity provision logic without core code changes.
 
 ## Installation
 
-Ensure you have Python 3.10+ installed. It is highly recommended to use a virtual environment.
+Ensure you have Python 3.10+ installed. It is recommended to use a virtual environment:
 
 ```bash
 # Clone the repository
@@ -24,22 +24,21 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Basic Usage
+## Usage
 
-To initialize the bot, configure your `config.yaml` with your RPC provider and wallet address, then execute the main module:
+Configure your `config.yaml` with your RPC endpoints and private keys. Execute the tool by running the main entry point with your selected strategy:
 
 ```bash
-# Configure environment variables
-export RPC_URL="https://mainnet.infura.io/v3/YOUR_KEY"
-
-# Run the execution engine
-python main.py --strategy=market_maker --pair=WETH-USDC
+# Example: Running the arbitrage strategy
+python main.py --strategy arb_bot --network mainnet
 ```
-
-For advanced configuration, reference the `docs/` folder for parameter tuning regarding slippage tolerance and gas priority fees.
 
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-*Distributed under the MIT License. See `LICENSE` for more information.*
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+*Disclaimer: This tool is for educational and research purposes only. Automating interactions with financial protocols involves significant risk of capital loss. Use with caution.*

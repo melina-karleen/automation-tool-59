@@ -5,18 +5,19 @@ from typing import Callable, Any
 
 logger = logging.getLogger(__name__)
 
-def retry_network_call(max_retries: int = 3, delay: float = 1.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
+def retry(max_attempts: int = 3, delay: float = 1.0):
+    def decorator(func: Callable):
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
+        def wrapper(*args, **kwargs) -> Any:
+            attempts = 0
+            while attempts < max_attempts:
                 try:
                     return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    last_exception = e
-                    logger.warning(f"attempt {attempt + 1} failed: {e}")
-                    time.sleep(delay * (2 ** attempt))
-            raise last_exception
+                except Exception as e:
+                    attempts += 1
+                    if attempts >= max_attempts:
+                        logger.error(f"failed after {max_attempts} attempts: {e}")
+                        raise
+                    time.sleep(delay)
         return wrapper
     return decorator

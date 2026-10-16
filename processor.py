@@ -1,32 +1,34 @@
-from typing import List, Dict, Any, Optional
+import logging
 
-class CryptoProcessor:
-    """Handles incoming market data for crypto automation."""
+class DataProcessor:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
 
-    def __init__(self, api_key: str, sandbox: bool = False) -> None:
-        self.api_key: str = api_key
-        self.sandbox: bool = sandbox
+    def validate_input(self, data: dict) -> bool:
+        required = ['symbol', 'amount', 'price']
+        if not all(k in data for k in required):
+            return False
+        if not isinstance(data['amount'], (int, float)) or data['amount'] <= 0:
+            return False
+        if not isinstance(data['price'], (int, float)) or data['price'] < 0:
+            return False
+        return True
 
-    def process_order(self, pair: str, amount: float, price: float) -> Dict[str, Any]:
-        """Executes a trade order for the given asset pair."""
-        return {
-            "pair": pair,
-            "amount": amount,
-            "price": price,
-            "status": "pending",
-            "sandbox": self.sandbox
-        }
+    def run_loop(self, queue):
+        while True:
+            try:
+                message = queue.get()
+                if message is None:
+                    break
+                
+                if not self.validate_input(message):
+                    self.logger.warning(f"invalid payload received: {message}")
+                    continue
 
-    def validate_tickers(self, tickers: List[str]) -> bool:
-        """Verifies existence of tickers in the current market pool."""
-        return all(isinstance(t, str) and len(t) > 2 for t in tickers)
+                self.process(message)
+            except Exception as e:
+                self.logger.error(f"unexpected processing error: {e}")
 
-    def get_market_status(self, timeout: Optional[int] = 30) -> str:
-        """Retrieves current connection status to exchange nodes."""
-        if timeout and timeout > 0:
-            return "online"
-        return "offline"
-
-    def calculate_spread(self, bid: float, ask: float) -> float:
-        """Computes the bid-ask spread for liquidity analysis."""
-        return round(ask - bid, 8)
+    def process(self, data: dict):
+        # processing logic implementation
+        self.logger.info(f"processing trade for {data['symbol']}")

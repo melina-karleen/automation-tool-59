@@ -1,23 +1,25 @@
-import time
-import functools
-import logging
-from typing import Callable, Any
+from typing import Union, List
+from decimal import Decimal
 
-logger = logging.getLogger(__name__)
+def format_crypto_amount(amount: Union[str, float, Decimal], precision: int = 8) -> str:
+    """Format crypto currency values to fixed string representation."""
+    return f"{Decimal(str(amount)):.{precision}f}"
 
-def retry(max_attempts: int = 3, delay: float = 1.0):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            attempts = 0
-            while attempts < max_attempts:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    attempts += 1
-                    if attempts >= max_attempts:
-                        logger.error(f"failed after {max_attempts} attempts: {e}")
-                        raise
-                    time.sleep(delay)
-        return wrapper
-    return decorator
+def calculate_fee(amount: Decimal, rate: Decimal) -> Decimal:
+    """Calculate transaction fees based on rate."""
+    return (amount * rate).quantize(Decimal('0.00000001'))
+
+def validate_ticker(ticker: str) -> bool:
+    """Check if ticker format is valid."""
+    if not ticker or not isinstance(ticker, str):
+        return False
+    return ticker.isupper() and 2 <= len(ticker) <= 10
+
+def aggregate_balances(balances: List[dict]) -> dict:
+    """Sum balances by asset type."""
+    summary = {}
+    for entry in balances:
+        asset = entry['asset']
+        amount = Decimal(str(entry['amount']))
+        summary[asset] = summary.get(asset, Decimal('0')) + amount
+    return {k: str(v) for k, v in summary.items()}

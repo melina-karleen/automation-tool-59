@@ -1,33 +1,35 @@
 import os
-import json
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "rpc_url": "https://eth.llamarpc.com",
+    "rpc_url": "https://eth-mainnet.public.blastapi.io",
     "timeout": 30,
-    "retries": 3,
-    "debug": False
+    "retry_attempts": 3,
+    "log_level": "INFO",
+    "gas_buffer": 0.001
 }
 
 class ConfigLoader:
-    def __init__(self, path: str = "config.json"):
-        self.path = path
-        self.settings = self._load()
+    def __init__(self, env_prefix: str = "CRYPTO_"):
+        self.env_prefix = env_prefix
+        self.settings = DEFAULT_CONFIG.copy()
+        self._load_from_env()
 
-    def _load(self) -> Dict[str, Any]:
-        config = DEFAULT_CONFIG.copy()
-        if os.path.exists(self.path):
-            try:
-                with open(self.path, "r") as f:
-                    user_data = json.load(f)
-                    config.update(user_data)
-            except (json.JSONDecodeError, IOError):
-                pass
-        return config
+    def _load_from_env(self) -> None:
+        for key in self.settings.keys():
+            env_var = f"{self.env_prefix}{key.upper()}"
+            value = os.getenv(env_var)
+            if value is not None:
+                self.settings[key] = self._cast_type(key, value)
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.settings.get(key, default)
+    def _cast_type(self, key: str, value: str) -> Any:
+        target_type = type(DEFAULT_CONFIG[key])
+        try:
+            return target_type(value)
+        except (ValueError, TypeError):
+            return DEFAULT_CONFIG[key]
 
-    @property
-    def all(self) -> Dict[str, Any]:
-        return self.settings
+    def get(self, key: str) -> Any:
+        return self.settings.get(key)
+
+config = ConfigLoader()

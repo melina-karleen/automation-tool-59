@@ -1,29 +1,50 @@
 import logging
 import sys
-from logging.handlers import QueueHandler, QueueListener
-from queue import Queue
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class AsyncLogger:
-    def __init__(self, name: str = "crypto_bot"):
-        self.log_queue = Queue(-1)
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
 
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
+def setup_logger(
+    name: str = "crypto_automation",
+    log_dir: str = "logs",
+    filename: str = "automation.log",
+    max_bytes: int = 5 * 1024 * 1024,
+    backup_count: int = 5,
+    level: int = logging.INFO,
+) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-        self.queue_handler = QueueHandler(self.log_queue)
-        self.logger.addHandler(self.queue_handler)
-        
-        self.listener = QueueListener(self.log_queue, handler)
-        self.listener.start()
+    if logger.handlers:
+        return logger
 
-    def get_logger(self) -> logging.Logger:
-        return self.logger
+    log_path = Path(log_dir)
+    log_path.mkdir(parents=True, exist_ok=True)
+    file_path = log_path / filename
 
-    def stop(self):
-        self.listener.stop()
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-logger_instance = AsyncLogger()
-log = logger_instance.get_logger()
+    file_handler = RotatingFileHandler(
+        file_path,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(level)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
+
+
+def get_logger(name: str = "crypto_automation") -> logging.Logger:
+    return logging.getLogger(name)

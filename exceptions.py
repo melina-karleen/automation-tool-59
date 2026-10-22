@@ -1,32 +1,27 @@
-class CryptoError(Exception):
+class AutomationError(Exception):
     """Base exception for automation-tool-59."""
 
+class ConnectionTimeoutError(AutomationError):
+    """Raised when exchange API request times out."""
 
-class DataParsingError(CryptoError):
-    """Raised when ticker data is malformed."""
+class InsufficientBalanceError(AutomationError):
+    """Raised when wallet balance is too low."""
 
+class RateLimitExceeded(AutomationError):
+    """Raised when API quota is exhausted."""
 
-class ExchangeConnectionError(CryptoError):
-    """Raised when exchange API is unreachable."""
+class ValidationError(AutomationError):
+    """Raised for malformed transaction data."""
 
+import logging
 
-class RateLimitError(CryptoError):
-    """Raised when API threshold is exceeded."""
+logger = logging.getLogger('automation-tool-59')
 
-
-def handle_crypto_exception(e: Exception) -> None:
-    if isinstance(e, RateLimitError):
-        print(f"Rate limit exceeded: {e}")
-    elif isinstance(e, DataParsingError):
-        print(f"Critical data corruption: {e}")
+def handle_exception(exc: Exception) -> None:
+    if isinstance(exc, (ConnectionTimeoutError, RateLimitExceeded)):
+        logger.warning(f"Transient error: {exc}")
+    elif isinstance(exc, (InsufficientBalanceError, ValidationError)):
+        logger.error(f"Critical logic failure: {exc}")
     else:
-        print(f"General operational failure: {e}")
-
-
-__all__ = [
-    "CryptoError",
-    "DataParsingError",
-    "ExchangeConnectionError",
-    "RateLimitError",
-    "handle_crypto_exception"
-]
+        logger.critical(f"Unexpected system failure: {exc}")
+        raise exc

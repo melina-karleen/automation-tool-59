@@ -1,29 +1,32 @@
-class AutomationError(Exception):
+class CryptoError(Exception):
     """Base exception for automation-tool-59."""
 
-class ExchangeConnectionError(AutomationError):
+
+class DataParsingError(CryptoError):
+    """Raised when ticker data is malformed."""
+
+
+class ExchangeConnectionError(CryptoError):
     """Raised when exchange API is unreachable."""
 
-class RateLimitError(AutomationError):
-    """Raised when API rate limits are exceeded."""
 
-class OrderExecutionError(AutomationError):
-    """Raised when an order placement fails."""
+class RateLimitError(CryptoError):
+    """Raised when API threshold is exceeded."""
 
-class InsufficientFundsError(AutomationError):
-    """Raised when balance is lower than required."""
 
-class ValidationError(AutomationError):
-    """Raised when input parameters fail schema checks."""
+def handle_crypto_exception(e: Exception) -> None:
+    if isinstance(e, RateLimitError):
+        print(f"Rate limit exceeded: {e}")
+    elif isinstance(e, DataParsingError):
+        print(f"Critical data corruption: {e}")
+    else:
+        print(f"General operational failure: {e}")
 
-class ConfigurationError(AutomationError):
-    """Raised when environment configuration is missing."""
 
-def handle_exception(exc: Exception) -> None:
-    if isinstance(exc, (ExchangeConnectionError, RateLimitError)):
-        # Log temporary issues
-        return
-    if isinstance(exc, (InsufficientFundsError, ValidationError)):
-        # Log critical logic issues
-        raise exc
-    raise exc
+__all__ = [
+    "CryptoError",
+    "DataParsingError",
+    "ExchangeConnectionError",
+    "RateLimitError",
+    "handle_crypto_exception"
+]

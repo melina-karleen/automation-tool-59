@@ -1,50 +1,29 @@
 import logging
 import sys
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+from typing import Any
 
+class CryptoLogger:
+    def __init__(self, name: str = "automation-tool-59") -> None:
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-def setup_logger(
-    name: str = "crypto_automation",
-    log_dir: str = "logs",
-    filename: str = "automation.log",
-    max_bytes: int = 5 * 1024 * 1024,
-    backup_count: int = 5,
-    level: int = logging.INFO,
-) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    def log_error(self, operation: str, error: Exception) -> None:
+        error_type = type(error).__name__
+        self.logger.error(f"failed {operation}: {error_type} - {str(error)}")
 
-    if logger.handlers:
-        return logger
+    def safe_execute(self, operation: str, func: Any, *args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except ConnectionError as e:
+            self.log_error(f"{operation} (network failure)", e)
+        except ValueError as e:
+            self.log_error(f"{operation} (validation failure)", e)
+        except Exception as e:
+            self.log_error(f"{operation} (unexpected critical error)", e)
+        return None
 
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    file_path = log_path / filename
-
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    file_handler = RotatingFileHandler(
-        file_path,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    return logger
-
-
-def get_logger(name: str = "crypto_automation") -> logging.Logger:
-    return logging.getLogger(name)
+logger = CryptoLogger()

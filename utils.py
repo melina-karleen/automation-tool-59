@@ -1,28 +1,29 @@
-import time
-import functools
-import logging
-from typing import Callable, Any
+import json
+from decimal import Decimal
+from typing import Any, Dict
 
-logger = logging.getLogger(__name__)
+def normalize_crypto_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Sanitizes and converts crypto pricing data."""
+    normalized = {}
+    for key, value in data.items():
+        if isinstance(value, (str, float, int)):
+            try:
+                normalized[key] = float(Decimal(str(value)))
+            except Exception:
+                normalized[key] = value
+        else:
+            normalized[key] = value
+    return normalized
 
-def retry_network_op(retries: int = 3, delay: float = 1.0, backoff: int = 2):
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
-            for i in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    if i == retries - 1:
-                        logger.error(f"failed after {retries} attempts: {e}")
-                        raise
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-        return wrapper
-    return decorator
+def validate_ticker(ticker: str) -> bool:
+    """Checks format of trading pairs."""
+    return isinstance(ticker, str) and '/' in ticker and len(ticker) <= 12
 
-@retry_network_op(retries=3)
-def fetch_price(symbol: str) -> float:
-    # example network call simulation
-    return 0.0
+def format_order_payload(symbol: str, side: str, amount: float) -> str:
+    """Serializes order request to JSON string."""
+    payload = {
+        "symbol": symbol.upper(),
+        "side": side.lower(),
+        "amount": float(amount)
+    }
+    return json.dumps(payload)

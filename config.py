@@ -1,32 +1,28 @@
-import json
 import os
-from typing import Any, Dict
+from typing import Dict, Any
 
-DEFAULTS = {
-    "rpc_url": "https://bsc-dataseed.binance.org",
-    "max_retries": 3,
-    "timeout": 30,
-    "gas_multiplier": 1.2
-}
+class ConfigError(Exception):
+    pass
 
-def load_config(path: str = "config.json") -> Dict[str, Any]:
-    config = DEFAULTS.copy()
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            try:
-                user_config = json.load(f)
-                config.update(user_config)
-            except json.JSONDecodeError:
-                pass
-    return config
+def load_config() -> Dict[str, Any]:
+    try:
+        api_key = os.getenv("API_KEY")
+        api_secret = os.getenv("API_SECRET")
+        env = os.getenv("ENV", "production")
 
-class ConfigManager:
-    def __init__(self, path: str = "config.json"):
-        self._config = load_config(path)
+        if not all([api_key, api_secret]):
+            raise ConfigError("missing required credentials")
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
+        return {
+            "api_key": api_key,
+            "api_secret": api_secret,
+            "env": env,
+            "rate_limit": int(os.getenv("RATE_LIMIT", 100)),
+            "timeout": float(os.getenv("TIMEOUT", 30.0))
+        }
+    except (ValueError, TypeError) as e:
+        raise ConfigError(f"invalid environment variable format: {e}")
+    except Exception as e:
+        raise ConfigError(f"unexpected configuration failure: {e}")
 
-    @property
-    def settings(self) -> Dict[str, Any]:
-        return self._config.copy()
+config = load_config()

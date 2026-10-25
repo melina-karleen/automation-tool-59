@@ -1,29 +1,33 @@
-import json
-from decimal import Decimal
-from typing import Any, Dict
+import time
+import logging
+from typing import Callable, Any
+from decimal import Decimal, ROUND_HALF_UP
 
-def normalize_crypto_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Sanitizes and converts crypto pricing data."""
-    normalized = {}
-    for key, value in data.items():
-        if isinstance(value, (str, float, int)):
-            try:
-                normalized[key] = float(Decimal(str(value)))
-            except Exception:
-                normalized[key] = value
-        else:
-            normalized[key] = value
-    return normalized
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("automation-tool-59")
 
-def validate_ticker(ticker: str) -> bool:
-    """Checks format of trading pairs."""
-    return isinstance(ticker, str) and '/' in ticker and len(ticker) <= 12
+def retry_operation(retries: int = 3, delay: float = 1.0) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, **kwargs) -> Any:
+            last_ex = None
+            for i in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_ex = e
+                    time.sleep(delay * (2 ** i))
+            raise last_ex
+        return wrapper
+    return decorator
 
-def format_order_payload(symbol: str, side: str, amount: float) -> str:
-    """Serializes order request to JSON string."""
-    payload = {
-        "symbol": symbol.upper(),
-        "side": side.lower(),
-        "amount": float(amount)
-    }
-    return json.dumps(payload)
+def format_crypto(value: float, precision: int = 8) -> Decimal:
+    return Decimal(str(value)).quantize(
+        Decimal(10) ** -precision, 
+        rounding=ROUND_HALF_UP
+    )
+
+def validate_order_size(amount: float, min_size: float) -> bool:
+    return amount >= min_size
+
+def get_timestamp() -> int:
+    return int(time.time() * 1000)

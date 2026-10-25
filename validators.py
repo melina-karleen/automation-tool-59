@@ -1,32 +1,35 @@
 import re
-from decimal import Decimal, InvalidOperation
 
-class InputValidator:
-    @staticmethod
-    def is_valid_address(address: str) -> bool:
-        return bool(re.match(r'^0x[a-fA-F0-9]{40}$', address))
+ETH_ADDRESS_PATTERN = re.compile(r"^0x[a-fA-F0-9]{40}$")
+SOL_ADDRESS_PATTERN = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+TX_HASH_PATTERN = re.compile(r"^(0x)?[a-fA-F0-9]{64}$")
 
-    @staticmethod
-    def is_valid_amount(amount: str) -> bool:
-        try:
-            val = Decimal(amount)
-            return val > 0
-        except (InvalidOperation, ValueError):
-            return False
 
-    @staticmethod
-    def validate_payload(data: dict) -> bool:
-        required_fields = ['address', 'amount', 'symbol']
-        if not all(k in data for k in required_fields):
-            return False
-        
-        return (
-            InputValidator.is_valid_address(data['address'])
-            and InputValidator.is_valid_amount(data['amount'])
-            and isinstance(data['symbol'], str)
-            and len(data['symbol']) <= 10
-        )
+def is_valid_eth_address(address: str) -> bool:
+    if not isinstance(address, str):
+        return False
+    return bool(ETH_ADDRESS_PATTERN.match(address))
 
-def process_data(raw_data: dict):
-    if not InputValidator.validate_payload(raw_data):
-        raise ValueError('invalid input parameters provided')
+
+def is_valid_solana_address(address: str) -> bool:
+    if not isinstance(address, str):
+        return False
+    return bool(SOL_ADDRESS_PATTERN.match(address))
+
+
+def is_valid_tx_hash(tx_hash: str) -> bool:
+    if not isinstance(tx_hash, str):
+        return False
+    return bool(TX_HASH_PATTERN.match(tx_hash))
+
+
+def validate_slippage(slippage: float) -> bool:
+    if not isinstance(slippage, (int, float)):
+        return False
+    return 0.0 < slippage <= 50.0
+
+
+def validate_trade_amount(amount: float, min_amount: float = 0.0) -> bool:
+    if not isinstance(amount, (int, float)):
+        return False
+    return amount > min_amount

@@ -1,44 +1,48 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # automation-tool-59
 
-`automation-tool-59` is a high-performance Python framework designed for asynchronous interaction with decentralized exchange (DEX) liquidity pools. It provides a robust, low-latency environment for executing automated market-making and arbitrage strategies across EVM-compatible chains.
+`automation-tool-59` is an asynchronous Python engine designed for real-time liquidity rebalancing and cross-DEX arbitrage execution on EVM-compatible blockchains. It interfaces directly with decentralized exchange smart contracts via Web3.py to monitor mempools and execute low-latency trades with dynamic gas optimization.
 
-## Key Features
+## Features
 
-*   **Async Web3 Integration:** Utilizes `web3.py` with `asyncio` for non-blocking transaction broadcasting and real-time state monitoring.
-*   **Adaptive Gas Management:** Implements a dynamic gas estimation engine that adjusts based on mempool congestion to minimize failed transactions.
-*   **Encrypted Key Management:** Secure environment variable handling with support for hardware wallet signatures (via integration with Ledger/Trezor providers).
-*   **Modular Strategy Engine:** Pluggable architecture allowing users to swap between mean-reversion, triangular arbitrage, and liquidity provision logic without core code changes.
+- **Mempool Monitoring**: Real-time WebSocket connection to pending transaction pools for early detection of price discrepancies across decentralized exchanges.
+- **Multi-DEX Smart Routing**: Automated order routing across Uniswap V3, Sushiswap, and PancakeSwap with configurable slippage tolerance.
+- **Dynamic EIP-1559 Gas Pricing**: Live gas estimation algorithm that adjusts max priority fees to ensure target block inclusion without overpaying.
+- **Aave V3 Flash Loan Integration**: Built-in smart contract wrappers to execute uncollateralized arbitrage routes within a single transaction.
 
 ## Installation
 
-Ensure you have Python 3.10+ installed. It is recommended to use a virtual environment:
+Ensure you have Python 3.10+ installed.
 
 ```bash
-# Clone the repository
 git clone https://github.com/Developer/automation-tool-59.git
 cd automation-tool-59
-
-# Install dependencies
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Usage
+## Basic Usage
 
-Configure your `config.yaml` with your RPC endpoints and private keys. Execute the tool by running the main entry point with your selected strategy:
+Configure your environment variables in `.env` and initialize the scanner engine:
 
-```bash
-# Example: Running the arbitrage strategy
-python main.py --strategy arb_bot --network mainnet
-```
+```python
+import os
+from automation_tool_59 import ArbitrageEngine, StrategyConfig
 
-## License
+# Initialize engine with RPC endpoint
+engine = ArbitrageEngine(
+    rpc_url=os.getenv("ETH_RPC_URL", "https://eth-mainnet.g.alchemy.com/v2/demo"),
+    chain_id=1
+)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# Load execution strategy configuration
+config = StrategyConfig(
+    target_pairs=["ETH/USDC", "WBTC/ETH"],
+    min_profit_threshold_usd=25.0,
+    max_slippage_pct=0.5
+)
 
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-*Disclaimer: This tool is for educational and research purposes only. Automating interactions with financial protocols involves significant risk of capital loss. Use with caution.*
+# Start async event loop
+engine.run(config=config)

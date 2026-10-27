@@ -1,28 +1,32 @@
+import json
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
-class ConfigError(Exception):
-    pass
+DEFAULT_CONFIG = {
+    "rpc_url": "https://api.mainnet.chain",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "wallet_address": None
+}
 
-def load_config() -> Dict[str, Any]:
-    try:
-        api_key = os.getenv("API_KEY")
-        api_secret = os.getenv("API_SECRET")
-        env = os.getenv("ENV", "production")
+class ConfigLoader:
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = config_path
+        self.data = self._load()
 
-        if not all([api_key, api_secret]):
-            raise ConfigError("missing required credentials")
+    def _load(self) -> Dict[str, Any]:
+        config = DEFAULT_CONFIG.copy()
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r") as f:
+                    user_config = json.load(f)
+                    config.update(user_config)
+            except (json.JSONDecodeError, IOError):
+                pass
+        return config
 
-        return {
-            "api_key": api_key,
-            "api_secret": api_secret,
-            "env": env,
-            "rate_limit": int(os.getenv("RATE_LIMIT", 100)),
-            "timeout": float(os.getenv("TIMEOUT", 30.0))
-        }
-    except (ValueError, TypeError) as e:
-        raise ConfigError(f"invalid environment variable format: {e}")
-    except Exception as e:
-        raise ConfigError(f"unexpected configuration failure: {e}")
+    def get(self, key: str) -> Any:
+        return self.data.get(key)
 
-config = load_config()
+def get_config() -> ConfigLoader:
+    return ConfigLoader()

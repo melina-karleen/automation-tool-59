@@ -1,28 +1,28 @@
-import functools
+import hashlib
+import hmac
 import time
-from typing import Callable, Any, Dict
+from typing import Dict, Any
+from urllib.parse import urlencode
 
-CACHE: Dict[str, Any] = {}
+def generate_signature(secret: str, message: str) -> str:
+    return hmac.new(
+        secret.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
 
-def memoize_data(ttl: int = 60) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            key = f"{func.__name__}:{args}:{frozenset(kwargs.items())}"
-            now = time.time()
-            if key in CACHE:
-                val, timestamp = CACHE[key]
-                if now - timestamp < ttl:
-                    return val
-            result = func(*args, **kwargs)
-            CACHE[key] = (result, now)
-            return result
-        return wrapper
-    return decorator
+def build_query_string(params: Dict[str, Any]) -> str:
+    return urlencode(sorted(params.items()))
 
-def batch_process(items: list, chunk_size: int = 100):
-    for i in range(0, len(items), chunk_size):
-        yield items[i:i + chunk_size]
+def get_timestamp_ms() -> int:
+    return int(time.time() * 1000)
 
-def clean_cache():
-    CACHE.clear()
+def format_price(price: float, precision: int = 8) -> str:
+    return f"{price:.{precision}f}".rstrip('0').rstrip('.')
+
+def validate_order_params(params: Dict[str, Any]) -> bool:
+    required = ['symbol', 'side', 'type', 'quantity']
+    return all(key in params for key in required)
+
+def calculate_fee(amount: float, rate: float) -> float:
+    return round(amount * rate, 8)

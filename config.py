@@ -1,32 +1,37 @@
 import json
 import os
-from typing import Any, Dict
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-DEFAULT_CONFIG = {
-    "rpc_url": "https://api.mainnet.chain",
-    "timeout": 30,
-    "retry_attempts": 3,
-    "wallet_address": None
-}
 
-class ConfigLoader:
-    def __init__(self, config_path: str = "config.json"):
-        self.config_path = config_path
-        self.data = self._load()
+@dataclass
+class Config:
+    api_key: str = ""
+    api_secret: str = ""
+    exchange: str = "binance"
+    trading_pair: str = "BTC/USDT"
+    max_position_size: float = 0.1
+    slippage_tolerance: float = 0.005
+    log_level: str = "INFO"
+    extra: Dict[str, Any] = field(default_factory=dict)
 
-    def _load(self) -> Dict[str, Any]:
-        config = DEFAULT_CONFIG.copy()
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, "r") as f:
-                    user_config = json.load(f)
-                    config.update(user_config)
-            except (json.JSONDecodeError, IOError):
-                pass
-        return config
 
-    def get(self, key: str) -> Any:
-        return self.data.get(key)
+def load_config(config_path: Optional[Path] = None) -> Config:
+    defaults = Config()
+    loaded_data: Dict[str, Any] = {}
 
-def get_config() -> ConfigLoader:
-    return ConfigLoader()
+    if config_path and config_path.is_file():
+        with open(config_path, "r", encoding="utf-8") as f:
+            loaded_data = json.load(f)
+
+    return Config(
+        api_key=os.getenv("CRYPTO_API_KEY", loaded_data.get("api_key", defaults.api_key)),
+        api_secret=os.getenv("CRYPTO_API_SECRET", loaded_data.get("api_secret", defaults.api_secret)),
+        exchange=loaded_data.get("exchange", os.getenv("CRYPTO_EXCHANGE", defaults.exchange)),
+        trading_pair=loaded_data.get("trading_pair", defaults.trading_pair),
+        max_position_size=float(loaded_data.get("max_position_size", defaults.max_position_size)),
+        slippage_tolerance=float(loaded_data.get("slippage_tolerance", defaults.slippage_tolerance)),
+        log_level=loaded_data.get("log_level", defaults.log_level),
+        extra=loaded_data.get("extra", {}),
+    )

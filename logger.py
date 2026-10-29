@@ -1,50 +1,30 @@
-import os
-import sys
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+LOG_FILE = "automation.log"
+MAX_BYTES = 5 * 1024 * 1024
+BACKUP_COUNT = 3
 
-def setup_logger(
-    name: str = "crypto_bot",
-    log_dir: str = "logs",
-    level: int = logging.INFO,
-    max_bytes: int = 10_000_000,
-    backup_count: int = 5,
-) -> logging.Logger:
-    Path(log_dir).mkdir(parents=True, exist_ok=True)
-    log_file = os.path.join(log_dir, f"{name}.log")
-
+def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    if logger.handlers:
-        return logger
-
-    formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    file_handler = RotatingFileHandler(
-        filename=log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
+    logger.setLevel(logging.INFO)
+    
+    if not logger.handlers:
+        log_path = Path(LOG_FILE)
+        handler = RotatingFileHandler(
+            log_path, 
+            maxBytes=MAX_BYTES, 
+            backupCount=BACKUP_COUNT
+        )
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        
     return logger
-
-
-def get_trade_logger(symbol: str) -> logging.Logger:
-    clean_symbol = symbol.lower().replace("/", "_")
-    return setup_logger(name=f"trade_{clean_symbol}")

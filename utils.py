@@ -1,33 +1,35 @@
-import time
-import logging
-from typing import Callable, Any
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Dict, Any
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("automation-tool-59")
 
-def retry_operation(retries: int = 3, delay: float = 1.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs) -> Any:
-            last_ex = None
-            for i in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_ex = e
-                    time.sleep(delay * (2 ** i))
-            raise last_ex
-        return wrapper
-    return decorator
+def format_crypto_amount(amount: float | str | Decimal, precision: int = 8) -> str:
+    d = Decimal(str(amount))
+    fmt = f"0.{'0' * precision}"
+    return str(d.quantize(Decimal(fmt), rounding=ROUND_HALF_UP))
 
-def format_crypto(value: float, precision: int = 8) -> Decimal:
-    return Decimal(str(value)).quantize(
-        Decimal(10) ** -precision, 
-        rounding=ROUND_HALF_UP
-    )
 
-def validate_order_size(amount: float, min_size: float) -> bool:
-    return amount >= min_size
+def normalize_symbol(symbol: str) -> str:
+    clean = symbol.upper().replace("-", "").replace("_", "").replace("/", "")
+    for quote in ["USDT", "USDC", "BUSD", "BTC", "ETH"]:
+        if clean.endswith(quote) and len(clean) > len(quote):
+            base = clean[:-len(quote)]
+            return f"{base}/{quote}"
+    return symbol.upper()
 
-def get_timestamp() -> int:
-    return int(time.time() * 1000)
+
+def calculate_price_change(entry_price: float, current_price: float) -> float:
+    if entry_price <= 0:
+        raise ValueError("Entry price must be greater than zero")
+    return ((current_price - entry_price) / entry_price) * 100.0
+
+
+def parse_ticker(data: Dict[str, Any]) -> Dict[str, Any]:
+    symbol = normalize_symbol(str(data.get("symbol", "")))
+    last_price = float(data.get("lastPrice", data.get("close", 0.0)))
+    volume = float(data.get("volume", data.get("baseVolume", 0.0)))
+    return {
+        "symbol": symbol,
+        "last_price": last_price,
+        "volume": volume,
+        "timestamp": data.get("timestamp") or data.get("time"),
+    }

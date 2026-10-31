@@ -1,48 +1,37 @@
-from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import List, Dict, Optional
+from dataclasses import dataclass
 
+@dataclass
+class Transaction:
+    tx_id: str
+    amount: float
+    symbol: str
 
-class TradeProcessor:
-    """Process crypto trade signals and validate execution parameters."""
+class CryptoProcessor:
+    """Handles batch processing of crypto transactions."""
 
-    def __init__(self, min_notional: Decimal = Decimal("10.0")) -> None:
-        self.min_notional = min_notional
+    def __init__(self, fee_rate: float = 0.001) -> None:
+        self.fee_rate: float = fee_rate
 
-    def parse_signal(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Extract and normalize trade signal parameters from payload."""
-        symbol = payload.get("symbol")
-        side = str(payload.get("side", "")).upper()
-        price_raw = payload.get("price")
-        amount_raw = payload.get("amount")
+    def calculate_net_amount(self, tx: Transaction) -> float:
+        """Calculates amount after network fees."""
+        return tx.amount * (1 - self.fee_rate)
 
-        if not all([symbol, side in ("BUY", "SELL"), price_raw, amount_raw]):
+    def process_batch(self, transactions: List[Transaction]) -> Dict[str, float]:
+        """Processes list of transactions and returns mapping of IDs to net amounts."""
+        return {tx.tx_id: self.calculate_net_amount(tx) for tx in transactions}
+
+    def filter_large_txs(self, transactions: List[Transaction], threshold: float) -> List[Transaction]:
+        """Filters transactions exceeding specified threshold."""
+        return [tx for tx in transactions if tx.amount > threshold]
+
+    def get_summary(self, transactions: List[Transaction]) -> Optional[Dict[str, float]]:
+        """Returns summary statistics for a batch."""
+        if not transactions:
             return None
-
-        try:
-            price = Decimal(str(price_raw))
-            amount = Decimal(str(amount_raw))
-            notional = price * amount
-        except (ValueError, TypeError):
-            return None
-
-        if notional < self.min_notional:
-            return None
-
+        
+        total: float = sum(tx.amount for tx in transactions)
         return {
-            "symbol": str(symbol).upper(),
-            "side": side,
-            "price": price,
-            "amount": amount,
-            "notional": notional,
+            "total_volume": total,
+            "avg_tx": total / len(transactions)
         }
-
-    def process_batch(
-        self, signals: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Filter and process a batch of raw trade signals."""
-        processed: List[Dict[str, Any]] = []
-        for raw_signal in signals:
-            result = self.parse_signal(raw_signal)
-            if result:
-                processed.append(result)
-        return processed

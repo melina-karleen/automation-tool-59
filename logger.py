@@ -1,30 +1,31 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import sys
+from typing import Optional
 
-LOG_FILE = "automation.log"
-MAX_BYTES = 5 * 1024 * 1024
-BACKUP_COUNT = 3
+class CryptoLogger:
+    """Custom logger for automation-tool-59 operations."""
 
-def get_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    
-    if not logger.handlers:
-        log_path = Path(LOG_FILE)
-        handler = RotatingFileHandler(
-            log_path, 
-            maxBytes=MAX_BYTES, 
-            backupCount=BACKUP_COUNT
-        )
+    def __init__(self, name: str, level: int = logging.INFO) -> None:
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        self._setup_handler()
+
+    def _setup_handler(self) -> None:
+        handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
         )
         handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        
-    return logger
+        self.logger.addHandler(handler)
+
+    def info(self, msg: str, *args: object) -> None:
+        """Log informational messages."""
+        self.logger.info(msg, *args)
+
+    def error(self, msg: str, exc_info: Optional[bool] = None) -> None:
+        """Log error messages with optional traceback."""
+        self.logger.error(msg, exc_info=exc_info)
+
+def get_logger(name: str) -> logging.Logger:
+    """Factory function to retrieve named logger instance."""
+    return CryptoLogger(name).logger

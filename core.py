@@ -1,71 +1,52 @@
+import asyncio
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import Dict, List, Tuple
 
 
-class CryptoOrderManager:
-    """Manages order calculation and execution tracking for crypto exchanges."""
+class Order:
+    __slots__ = ("symbol", "price", "amount", "side")
 
-    def __init__(
-        self, api_key: str, secret_key: str, base_url: str = "https://api.exchange.com"
+    def __init__(self, symbol: str, price: Decimal, amount: Decimal, side: str):
+        self.symbol = symbol
+        self.price = price
+        self.amount = amount
+        self.side = side
+
+
+class OptimizedOrderEngine:
+    def __init__(self, batch_size: int = 100):
+        self.batch_size = batch_size
+        self._queue: asyncio.Queue[Order] = asyncio.Queue()
+        self._metrics: Dict[str, Decimal] = {}
+
+    async def enqueue_order(
+        self, symbol: str, price: str, amount: str, side: str
     ) -> None:
-        """Initialize the order manager with credentials.
+        order = Order(symbol, Decimal(price), Decimal(amount), side)
+        await self._queue.put(order)
 
-        Args:
-            api_key: The exchange API key.
-            secret_key: The exchange secret key.
-            base_url: Base endpoint URL for the exchange API.
-        """
-        self.api_key: str = api_key
-        self.secret_key: str = secret_key
-        self.base_url: str = base_url
-        self._order_history: List[Dict[str, Any]] = []
+    async def process_batches(self) -> List[Tuple[str, Decimal, Decimal]]:
+        batch: List[Order] = []
+        results: List[Tuple[str, Decimal, Decimal]] = []
 
-    def calculate_position_size(
-        self,
-        balance: Decimal,
-        risk_percentage: Decimal,
-        entry_price: Decimal,
-        stop_loss: Decimal,
-    ) -> Decimal:
-        """Calculate position size based on account balance and risk parameters.
+        while not self._queue.empty() and len(batch) < self.batch_size:
+            batch.append(self._queue.get_nowait())
 
-        Args:
-            balance: Account balance in quote currency.
-            risk_percentage: Risk allowance per trade as decimal (e.g., 0.02).
-            entry_price: Target entry price for asset.
-            stop_loss: Stop loss execution price.
+        if not batch:
+            return results
 
-        Returns:
-            Recommended position size in base currency units.
-        """
-        if entry_price <= Decimal("0") or stop_loss <= Decimal("0"):
-            raise ValueError("Prices must be greater than zero.")
-        risk_amount: Decimal = balance * risk_percentage
-        price_risk: Decimal = abs(entry_price - stop_loss)
-        if price_risk == Decimal("0"):
-            raise ValueError("Entry price and stop loss cannot be equal.")
-        return risk_amount / price_risk
+        summary: Dict[str, Decimal] = {}
+        for order in batch:
+            volume = order.price * order.amount
+            summary[order.symbol] = summary.get(order.symbol, Decimal("0")) + volume
 
-    def create_limit_order(
-        self, symbol: str, side: str, amount: Decimal, price: Decimal
-    ) -> Dict[str, Any]:
-        """Construct and record a limit order payload.
+        for symbol, total_vol in summary.items():
+            self._metrics[symbol] = (
+                self._metrics.get(symbol, Decimal("0")) + total_vol
+            )
+            results.append((symbol, total_vol, self._metrics[symbol]))
 
-        Args:
-            symbol: Asset pair identifier (e.g., 'BTC/USDT').
-            side: Order direction ('buy' or 'sell').
-            amount: Quantity of base currency to trade.
-            price: Limit price for order execution.
+        return results
 
-        Returns:
-            Order payload dict with current status.
-        """
-        order: Dict[str, Any] = {
-            "symbol": symbol.upper(),
-            "side": side.lower(),
-            "amount": str(amount),
-            "price": str(price),
-            "status": "pending",
-        }
-        self._order_history.append(order)
-        return order
+    def get_total_volume(self, symbol: str) -> Decimal:
+        return self._metrics.get(symbol, Decimal("0"))

@@ -1,36 +1,29 @@
-import re
 from typing import Any, Optional
 
-class AddressValidator:
-    ETH_PATTERN = re.compile(r'^0x[a-fA-F0-9]{40}$')
-    BTC_PATTERN = re.compile(r'^(1|3|bc1)[a-zA-Z0-9]{25,59}$')
+class ValidationError(Exception):
+    pass
 
-    @staticmethod
-    def is_valid_eth(address: str) -> bool:
-        return bool(AddressValidator.ETH_PATTERN.match(address))
+def validate_wallet_address(address: Any) -> str:
+    if not isinstance(address, str):
+        raise ValidationError('address must be a string')
+    if len(address) != 42 or not address.startswith('0x'):
+        raise ValidationError('invalid ethereum address format')
+    return address
 
-    @staticmethod
-    def is_valid_btc(address: str) -> bool:
-        return bool(AddressValidator.BTC_PATTERN.match(address))
+def validate_amount(amount: Any) -> float:
+    try:
+        value = float(amount)
+    except (ValueError, TypeError):
+        raise ValidationError('amount must be a numeric value')
+    if value <= 0:
+        raise ValidationError('amount must be greater than zero')
+    return value
 
-class DataValidator:
-    @staticmethod
-    def validate_positive_float(value: Any) -> float:
-        try:
-            val = float(value)
-            if val <= 0:
-                raise ValueError('Value must be positive')
-            return val
-        except (TypeError, ValueError):
-            raise ValueError(f'Invalid numeric input: {value}')
-
-    @staticmethod
-    def validate_ticker(ticker: str) -> str:
-        if not isinstance(ticker, str) or not 2 <= len(ticker) <= 10:
-            raise ValueError('Invalid ticker format')
-        return ticker.upper()
-
-class TransactionValidator:
-    @staticmethod
-    def check_min_amount(amount: float, min_val: float = 0.0001) -> bool:
-        return amount >= min_val
+def validate_network_payload(payload: Optional[dict]) -> dict:
+    if not payload or not isinstance(payload, dict):
+        raise ValidationError('payload must be a non-empty dictionary')
+    required_keys = {'tx_hash', 'gas_price'}
+    if not required_keys.issubset(payload.keys()):
+        missing = required_keys - payload.keys()
+        raise ValidationError(f'missing required fields: {missing}')
+    return payload

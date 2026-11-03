@@ -1,37 +1,49 @@
 import json
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
+
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "network": "mainnet",
+    "rpc_url": "https://cloudflare-eth.com",
+    "timeout": 30,
+    "max_retries": 3,
+    "gas_limit_multiplier": 1.1,
+    "slippage_tolerance": 0.5,
+    "enable_dry_run": True,
+    "symbols": ["BTC/USDT", "ETH/USDT"],
+}
 
 
-@dataclass
-class Config:
-    api_key: str = ""
-    api_secret: str = ""
-    exchange: str = "binance"
-    trading_pair: str = "BTC/USDT"
-    max_position_size: float = 0.1
-    slippage_tolerance: float = 0.005
-    log_level: str = "INFO"
-    extra: Dict[str, Any] = field(default_factory=dict)
+class ConfigManager:
+    def __init__(self, config_file: str = "config.json") -> None:
+        self.config_path = Path(config_file)
+        self.config: Dict[str, Any] = DEFAULT_CONFIG.copy()
+        self.load()
 
+    def load(self) -> Dict[str, Any]:
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    file_config = json.load(f)
+                    self.config.update(file_config)
+            except (json.JSONDecodeError, IOError) as err:
+                raise RuntimeError(f"Failed to load config file: {err}") from err
 
-def load_config(config_path: Optional[Path] = None) -> Config:
-    defaults = Config()
-    loaded_data: Dict[str, Any] = {}
+        self._override_from_env()
+        return self.config
 
-    if config_path and config_path.is_file():
-        with open(config_path, "r", encoding="utf-8") as f:
-            loaded_data = json.load(f)
+    def _override_from_env(self) -> None:
+        env_mappings = {
+            "CRYPTO_NETWORK": ("network", str),
+            "CRYPTO_RPC_URL": ("rpc_url", str),
+            "CRYPTO_TIMEOUT": ("timeout", int),
+            "CRYPTO_DRY_RUN": ("enable_dry_run", lambda v: v.lower() in ("true", "1", "yes")),
+        }
+        for env_var, (config_key, parser) in env_mappings.items():
+            val = os.getenv(env_var)
+            if val is not None:
+                self.config[config_key] = parser(val)
 
-    return Config(
-        api_key=os.getenv("CRYPTO_API_KEY", loaded_data.get("api_key", defaults.api_key)),
-        api_secret=os.getenv("CRYPTO_API_SECRET", loaded_data.get("api_secret", defaults.api_secret)),
-        exchange=loaded_data.get("exchange", os.getenv("CRYPTO_EXCHANGE", defaults.exchange)),
-        trading_pair=loaded_data.get("trading_pair", defaults.trading_pair),
-        max_position_size=float(loaded_data.get("max_position_size", defaults.max_position_size)),
-        slippage_tolerance=float(loaded_data.get("slippage_tolerance", defaults.slippage_tolerance)),
-        log_level=loaded_data.get("log_level", defaults.log_level),
-        extra=loaded_data.get("extra", {}),
-    )
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.config.get(key, default)

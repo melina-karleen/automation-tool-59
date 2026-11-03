@@ -1,36 +1,32 @@
-from typing import Dict, Any, Optional
-import logging
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Dict, Optional
 
-logger = logging.getLogger(__name__)
+class CryptoDataHandler:
+    def __init__(self, precision: int = 8):
+        self.precision = precision
 
-class CryptoHandler:
-    """Handles trade execution and order lifecycle management."""
+    def format_price(self, price: str) -> Decimal:
+        return Decimal(price).quantize(Decimal(f"1.{'0' * self.precision}"), rounding=ROUND_HALF_UP)
 
-    def __init__(self, api_key: str, secret: str) -> None:
-        self.api_key: str = api_key
-        self.secret: str = secret
+    def calculate_position_size(self, balance: float, risk_per_trade: float) -> Decimal:
+        return Decimal(str(balance * risk_per_trade)).quantize(Decimal('0.0001'))
 
-    def execute_trade(self, symbol: str, quantity: float, side: str) -> Dict[str, Any]:
-        """Executes a trade order on the exchange."""
-        if quantity <= 0:
-            raise ValueError("Quantity must be positive")
-        
-        payload: Dict[str, Any] = {
-            "symbol": symbol,
-            "quantity": quantity,
-            "side": side.upper()
-        }
-        logger.info(f"Executing {side} for {symbol}")
-        return {"status": "success", "data": payload}
-
-    def get_order_status(self, order_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves the status of a specific order."""
-        if not order_id:
+    def parse_market_data(self, data: Dict) -> Optional[Dict]:
+        try:
+            return {
+                "symbol": data["s"],
+                "price": self.format_price(data["p"]),
+                "volume": Decimal(data["q"]),
+                "timestamp": int(data["t"])
+            }
+        except (KeyError, ValueError, TypeError):
             return None
-        
-        return {"order_id": order_id, "state": "FILLED"}
 
-    def cancel_order(self, order_id: str) -> bool:
-        """Cancels an open order by ID."""
-        logger.warning(f"Attempting to cancel order: {order_id}")
-        return True
+    def validate_ticker(self, ticker: str) -> bool:
+        return bool(ticker and isinstance(ticker, str) and "/" in ticker)
+
+def sanitize_order_book(data: list) -> list:
+    return sorted([{
+        "price": Decimal(item[0]),
+        "amount": Decimal(item[1])
+    } for item in data], key=lambda x: x["price"])

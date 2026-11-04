@@ -1,38 +1,26 @@
-from enum import Enum
 from typing import Final
+from enum import Enum
 
+class ExchangeLimits(Enum):
+    MAX_RETRIES: int = 3
+    TIMEOUT_SEC: float = 0.5
+    BUFFER_SIZE: int = 1024
 
-class CryptoChain(str, Enum):
-    ETHEREUM = "ethereum"
-    SOLANA = "solana"
-    BINANCE = "bsc"
-    ARBITRUM = "arbitrum"
-    OPTIMISM = "optimism"
+CACHE_TTL_SECONDS: Final[int] = 300
+PRECISION_DIGITS: Final[int] = 8
 
-
-class OrderType(str, Enum):
-    LIMIT = "limit"
-    MARKET = "market"
-    STOP_LOSS = "stop_loss"
-    TAKE_PROFIT = "take_profit"
-
-
-class TradeStatus(str, Enum):
-    PENDING = "pending"
-    EXECUTED = "executed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-
-DEFAULT_SLIPPAGE_BPS: Final[int] = 50
-MAX_SLIPPAGE_BPS: Final[int] = 1000
-DEFAULT_GAS_LIMIT: Final[int] = 300000
-DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
-STABLECOIN_SYMBOLS: Final[set[str]] = {"USDT", "USDC", "DAI", "BUSD", "FDUSD"}
-PRECISION_DECIMALS: Final[dict[str, int]] = {
-    "BTC": 8,
-    "ETH": 18,
-    "SOL": 9,
-    "USDT": 6,
-    "USDC": 6,
+DEFAULT_HEADERS: Final[dict[str, str]] = {
+    "Content-Type": "application/json",
+    "User-Agent": "automation-tool-59/1.0"
 }
+
+RATE_LIMIT_BUCKET_SIZE: Final[int] = 50
+BATCH_PROCESS_THRESHOLD: Final[int] = 100
+
+VALID_ASSETS: Final[set[str]] = {"BTC", "ETH", "SOL", "ADA", "DOT"}
+
+def get_timeout() -> float:
+    return ExchangeLimits.TIMEOUT_SEC.value
+
+def get_batch_size() -> int:
+    return BATCH_PROCESS_THRESHOLD

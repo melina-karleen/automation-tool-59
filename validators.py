@@ -1,29 +1,29 @@
-from typing import Any, Optional
+import re
+from typing import Any
+from exceptions import ValidationError
 
-class ValidationError(Exception):
-    pass
+ADDRESS_PATTERN = re.compile(r'^0x[a-fA-F0-9]{40}$')
 
-def validate_wallet_address(address: Any) -> str:
-    if not isinstance(address, str):
-        raise ValidationError('address must be a string')
-    if len(address) != 42 or not address.startswith('0x'):
-        raise ValidationError('invalid ethereum address format')
-    return address
+def validate_eth_address(address: str) -> bool:
+    if not isinstance(address, str) or not ADDRESS_PATTERN.match(address):
+        raise ValidationError(f'invalid ethereum address: {address}')
+    return True
 
 def validate_amount(amount: Any) -> float:
     try:
-        value = float(amount)
+        val = float(amount)
+        if val <= 0:
+            raise ValueError
+        return val
     except (ValueError, TypeError):
-        raise ValidationError('amount must be a numeric value')
-    if value <= 0:
-        raise ValidationError('amount must be greater than zero')
-    return value
+        raise ValidationError(f'invalid numeric amount: {amount}')
 
-def validate_network_payload(payload: Optional[dict]) -> dict:
-    if not payload or not isinstance(payload, dict):
-        raise ValidationError('payload must be a non-empty dictionary')
-    required_keys = {'tx_hash', 'gas_price'}
-    if not required_keys.issubset(payload.keys()):
-        missing = required_keys - payload.keys()
-        raise ValidationError(f'missing required fields: {missing}')
-    return payload
+def validate_chain_id(chain_id: int) -> int:
+    if not isinstance(chain_id, int) or chain_id <= 0:
+        raise ValidationError(f'invalid chain identifier: {chain_id}')
+    return chain_id
+
+def validate_payload(data: dict, required_keys: list) -> None:
+    for key in required_keys:
+        if key not in data:
+            raise ValidationError(f'missing required field: {key}')

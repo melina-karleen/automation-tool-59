@@ -1,26 +1,28 @@
 from typing import Final
 from enum import Enum
 
-class ExchangeLimits(Enum):
-    MAX_RETRIES: int = 3
-    TIMEOUT_SEC: float = 0.5
-    BUFFER_SIZE: int = 1024
-
 CACHE_TTL_SECONDS: Final[int] = 300
-PRECISION_DIGITS: Final[int] = 8
+MAX_RETRIES: Final[int] = 3
+DEFAULT_TIMEOUT: Final[float] = 10.5
+BATCH_SIZE: Final[int] = 100
 
-DEFAULT_HEADERS: Final[dict[str, str]] = {
-    "Content-Type": "application/json",
-    "User-Agent": "automation-tool-59/1.0"
+class ExchangeType(Enum):
+    BINANCE = 'binance'
+    COINBASE = 'coinbase'
+    KRAKEN = 'kraken'
+
+API_ENDPOINTS: Final[dict[ExchangeType, str]] = {
+    ExchangeType.BINANCE: 'https://api.binance.com',
+    ExchangeType.COINBASE: 'https://api.exchange.coinbase.com',
+    ExchangeType.KRAKEN: 'https://api.kraken.com'
 }
 
-RATE_LIMIT_BUCKET_SIZE: Final[int] = 50
-BATCH_PROCESS_THRESHOLD: Final[int] = 100
+SUPPORTED_PAIRS: Final[tuple[str, ...]] = (
+    'BTC-USD',
+    'ETH-USD',
+    'SOL-USD',
+    'ADA-USD'
+)
 
-VALID_ASSETS: Final[set[str]] = {"BTC", "ETH", "SOL", "ADA", "DOT"}
-
-def get_timeout() -> float:
-    return ExchangeLimits.TIMEOUT_SEC.value
-
-def get_batch_size() -> int:
-    return BATCH_PROCESS_THRESHOLD
+RATE_LIMIT_DELAY: Final[float] = 0.05
+MEMORY_THRESHOLD_MB: Final[int] = 1024

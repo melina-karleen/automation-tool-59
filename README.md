@@ -1,19 +1,19 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 # automation-tool-59
 
-`automation-tool-59` is an asynchronous Python engine designed for real-time liquidity rebalancing and cross-DEX arbitrage execution on EVM-compatible blockchains. It interfaces directly with decentralized exchange smart contracts via Web3.py to monitor mempools and execute low-latency trades with dynamic gas optimization.
+An automated multi-DEX arbitrage and liquidity management engine designed for EVM-compatible networks. It monitors real-time mempool transactions and decentralized exchange order books to execute low-latency trades with dynamic slippage protection.
 
 ## Features
 
-- **Mempool Monitoring**: Real-time WebSocket connection to pending transaction pools for early detection of price discrepancies across decentralized exchanges.
-- **Multi-DEX Smart Routing**: Automated order routing across Uniswap V3, Sushiswap, and PancakeSwap with configurable slippage tolerance.
-- **Dynamic EIP-1559 Gas Pricing**: Live gas estimation algorithm that adjusts max priority fees to ensure target block inclusion without overpaying.
-- **Aave V3 Flash Loan Integration**: Built-in smart contract wrappers to execute uncollateralized arbitrage routes within a single transaction.
+- **Multi-DEX Price Aggregation:** Simultaneously tracks token pair discrepancies across Uniswap V3, Sushiswap, and Curve Finance using WebSockets.
+- **Flash Loan Integration:** Executes zero-capital arbitrage transactions by routing calls through Aave V3 pool providers within a single block.
+- **MEV Protection:** Protects transactions from front-running and sandwich attacks by utilizing Flashbots private RPC relays.
+- **Dynamic Gas Pricing:** Automatically calculates optimal priority fees using EIP-1559 models to ensure target block inclusion without overpaying.
 
 ## Installation
 
-Ensure you have Python 3.10+ installed.
+Clone the repository and set up the Python environment:
 
 ```bash
 git clone https://github.com/Developer/automation-tool-59.git
@@ -23,26 +23,37 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Set up environment variables:
+
+```bash
+cp .env.example .env
+```
+
 ## Basic Usage
 
-Configure your environment variables in `.env` and initialize the scanner engine:
+Run the bot using Python after configuring your RPC endpoints:
 
 ```python
-import os
-from automation_tool_59 import ArbitrageEngine, StrategyConfig
+from automation_tool import ArbitrageEngine, StrategyConfig
 
-# Initialize engine with RPC endpoint
-engine = ArbitrageEngine(
-    rpc_url=os.getenv("ETH_RPC_URL", "https://eth-mainnet.g.alchemy.com/v2/demo"),
-    chain_id=1
-)
-
-# Load execution strategy configuration
 config = StrategyConfig(
-    target_pairs=["ETH/USDC", "WBTC/ETH"],
-    min_profit_threshold_usd=25.0,
-    max_slippage_pct=0.5
+    network="ethereum",
+    rpc_url="https://eth-mainnet.g.alchemy.com/v2/demo",
+    target_pairs=["WETH/USDC", "WBTC/WETH"],
+    min_profit_threshold_usd=15.50,
+    enable_flashbots=True
 )
 
-# Start async event loop
-engine.run(config=config)
+engine = ArbitrageEngine(config)
+engine.start_monitoring()
+```
+
+To execute a dry-run simulation on a local fork:
+
+```bash
+python main.py --mode simulate --fork-block 18500000
+```
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
